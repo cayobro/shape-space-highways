@@ -19,5 +19,5 @@ x_mid = sum(x_limits)/2; y_mid = sum(y_limits)/2; z_mid = sum(z_limits)/2
 ax.set_xlim(x_mid - max_range/2, x_mid + max_range/2)
 ax.set_ylim(y_mid - max_range/2, y_mid + max_range/2)
 ax.set_zlim(z_mid - max_range/2, z_mid + max_range/2)
-
+plt.show()
 input("Debug breakpoint. Press Enter to exit...")
