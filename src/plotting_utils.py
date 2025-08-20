@@ -5,6 +5,31 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 torch.manual_seed(0)
 
+def get_color(color_name):
+    """
+    Retrieve RGB values of a color specified by its name.
+
+    Parameters:
+        color_name (str): The name of the color.
+
+    Returns:
+        list: RGB values of the color as a list of floats in the range [0, 1].
+    """
+    colors = {
+        "cardinal": [157/255, 34/255, 53/255],
+        "palo": [0/255, 106/255, 82/255],
+        "bay": [111/255, 162/255, 135/255],
+        "poppy": [233/255, 131/255, 0],
+        "plum": [98/255, 0, 89/255],
+        "illuminating": [254/255, 197/255, 29/255],
+        "sky": [66/255, 152/255, 181/255],
+        "spirited": [224/255, 79/255, 57/255],
+        "brick": [101/255, 28/255, 50/255],
+        "archway": [93/255, 75/255, 60,255]
+    }
+    return colors.get(color_name.lower(), [0, 0, 0])  # Default to black if color not found
+
+
 def plot_capped_cylinder(ax, center, radius, height, color='orange', alpha=0.25, n_theta=60, n_h=20):
     theta = np.linspace(0, 2*np.pi, n_theta)
     z = np.linspace(-height/2.0, height/2.0, n_h)
@@ -64,14 +89,11 @@ def plot_tube(ax, curve, radius, n_theta=18, color='C0', alpha=0.25):
 
 def plot_shape_sequence(
     all_rs,
-    path_indices,
+    path_indices_list,
     obstacles=None,
     tube_radius=None,
     waypoints_indices=None,                    # list of (P,3) curves to highlight
     ax=None,
-    path_color='C0',
-    endpoint_color='black',
-    waypoint_color='C3',
     path_linewidth=1.0,
     waypoint_linewidth=2.5,
     waypoint_marker=False,
@@ -81,7 +103,7 @@ def plot_shape_sequence(
     shapes: list/array of (P,3) centerlines (e.g., a planned path)
     waypoints: optional list of (P,3) curves you explicitly provided to the planner
     """
-
+    path_color = [get_color('palo'), get_color('bay'), get_color('plum'), get_color('sky'), get_color('poppy'), get_color('spirited'), get_color('brick'), get_color('archway')]
     created_ax = False
     if ax is None:
         fig = plt.figure()
@@ -89,12 +111,15 @@ def plot_shape_sequence(
         created_ax = True
 
     # --- draw path ---
-    shapes = all_rs[path_indices]
-    for t, curve in enumerate(shapes):
-        color = endpoint_color if (t == 0 or t == len(shapes) - 1) else path_color
-        ax.plot(curve[:,0], curve[:,1], curve[:,2], color=color, linewidth=path_linewidth)
-        if tube_radius is not None:
-            plot_tube(ax, curve, tube_radius, n_theta=18, color=path_color, alpha=0.20)
+    i = 0
+    for path_indices in path_indices_list:
+        shapes = all_rs[path_indices]
+        for t, curve in enumerate(shapes):
+            color = get_color('cardinal') if (t == 0 or t == len(shapes) - 1) else path_color[i]
+            ax.plot(curve[:,0], curve[:,1], curve[:,2], color=color, linewidth=path_linewidth)
+            if tube_radius is not None:
+                plot_tube(ax, curve, tube_radius, n_theta=18, color=path_color, alpha=0.20)
+        i = i + 1
 
     # --- draw obstacles (same as before) ---
     if obstacles:
@@ -110,7 +135,7 @@ def plot_shape_sequence(
     if waypoints_indices:
         waypoints = all_rs[waypoints_indices]
         for wp in waypoints:
-            ax.plot(wp[:,0], wp[:,1], wp[:,2], color=waypoint_color, linewidth=waypoint_linewidth)
+            ax.plot(wp[:,0], wp[:,1], wp[:,2], color=get_color('illuminating'), linewidth=waypoint_linewidth)
             if tube_radius is not None:
                 plot_tube(ax, wp, tube_radius, n_theta=18, color=waypoint_color, alpha=0.35)
             if waypoint_marker:
@@ -131,7 +156,7 @@ def plot_shape_sequence(
     return ax
 
 
-def plot_gammas(all_gammas, path_indices, waypoints_indices=None, waypoint_color='red', gamma_color='blue', waypoint_marker_size=50):
+def plot_gammas(all_gammas, path_indices_list, waypoints_indices=None, waypoint_marker_size=50, labels=None):
     """
     Plots the gamma values and optionally highlights waypoints.
 
@@ -142,22 +167,28 @@ def plot_gammas(all_gammas, path_indices, waypoints_indices=None, waypoint_color
         gamma_color (str, optional): Color for the gamma points. Default is 'blue'.
         waypoint_marker_size (int, optional): Size of the waypoint markers. Default is 50.
     """
-    gammas = all_gammas[path_indices]
-    xvec = np.arange(1, gammas.shape[0] + 1)  # X-axis values for gamma indices
+    path_color = [get_color('palo'), get_color('bay'), get_color('plum'), get_color('sky'), get_color('poppy'), get_color('spirited'), get_color('brick'), get_color('archway')]
     fig, ax = plt.subplots(3, 1, figsize=(8, 6))  # Create subplots for gamma1, gamma2, gamma3
 
     # Plot gamma values for each component
-    ax[0].scatter(xvec, gammas[:, 0], label='gamma1', color=gamma_color)
-    ax[1].scatter(xvec, gammas[:, 1], label='gamma2', color=gamma_color)
-    ax[2].scatter(xvec, gammas[:, 2], label='gamma3', color=gamma_color)
-
+    if not labels: labels = list(np.arange(len(path_indices_list)))
+    i = 0
+    for path_indices in path_indices_list:
+        gammas = all_gammas[path_indices]
+        xvec = np.arange(1, gammas.shape[0] + 1) 
+        ax[0].plot(xvec, gammas[:, 0], marker='.', color=path_color[i], label = labels[i])
+        ax[1].plot(xvec, gammas[:, 1], marker='.', color=path_color[i])
+        ax[2].plot(xvec, gammas[:, 2], marker='.', color=path_color[i])
+        i = i + 1
+    ax[0].set_title("gammas over shape sequence")
+    ax[0].legend()
     # Highlight waypoints if provided
     if waypoints_indices is not None:
         for i, a in enumerate(ax):
             for j in range(len(waypoints_indices)):
                 wp = path_indices.index(waypoints_indices[j])
                 a.scatter(wp+1, all_gammas[waypoints_indices[j], i],
-                        color=waypoint_color, s=waypoint_marker_size)
+                        color=get_color('illuminating'), s=waypoint_marker_size)
 
     # Add legends and labels
     for i, a in enumerate(ax):
@@ -167,4 +198,7 @@ def plot_gammas(all_gammas, path_indices, waypoints_indices=None, waypoint_color
 
     ax[2].set_xlabel('Index')  # Label for the x-axis
     fig.tight_layout()  # Adjust layout to prevent overlap
-    plt.show()  # Display the plot
+    plt.show(block=False)  # Display the plot
+
+
+
