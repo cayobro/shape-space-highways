@@ -62,6 +62,28 @@ def make_edge_weight_tbd(r, gamma, alpha=1.0, beta=0.0, lam=0.0):
         return alpha * dij + beta * c_mag + lam * c_dg
     return w
 
+def make_edge_weight_tbd_updated(r, gamma, alpha=1.0, beta=0.0, lam=0.0):
+    """
+    Creates a function to compute the weight of an edge between two points.
+
+    Parameters:
+        r (array-like): A list or array of points.
+        gamma (array-like): A list or array of activation values.
+        alpha (float): Weight for the shape distance term.
+        beta (float): Weight for the magnitude of gamma.
+        lam (float): Weight for the difference in gamma values.
+
+    Returns:
+        w (function): A function that computes the weight of an edge between two points i and j.
+    """
+    shape_dist = make_shape_dist(r)  # Create the shape distance function
+    def w(i, j):
+        dij = shape_dist(i, j)  # Shape distance between points i and j
+        c_mag = 0.5 * (np.matmul(gamma[i].transpose(), gamma[i]) + np.matmul(gamma[j].transpose(), gamma[j])) 
+        c_dg = np.linalg.norm(gamma[j] - gamma[i]) ** 2
+        # Compute the edge weight as a weighted sum of the terms
+        return alpha * dij + beta * c_mag + lam * c_dg
+    return w
 
 def make_edge_weight_sdf(r, node_clearance, alpha=1.0, mu=0.5, eps=0.01):
     """

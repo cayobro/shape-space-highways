@@ -26,8 +26,14 @@ adj2 = build_knn_graph(R, idxs, w2, valid_mask=None, tau=None, collision_ok=None
 # w4 = make_edge_weight_tbd(r, gamma, alpha=1.0, beta=0.0, lam=1.0) # distance + smooth
 # adj4 = build_knn_graph(R, idxs, w4, valid_mask=None, tau=None, collision_ok=None)
 
-w5 = make_edge_weight_tbd(r, gamma, alpha=0.0, beta=1.0, lam=1.0) # distance + smooth
-adj5 = build_knn_graph(R, idxs, w5, valid_mask=None, tau=None, collision_ok=None)
+# w5 = make_edge_weight_tbd(r, gamma, alpha=0.0, beta=1.0, lam=1.0) # distance + smooth
+# adj5 = build_knn_graph(R, idxs, w5, valid_mask=None, tau=None, collision_ok=None)
+
+w6 = make_edge_weight_tbd_updated(r, gamma, alpha=0.0, beta=1.0, lam=0.0) # new only low activation magnitude
+adj6 = build_knn_graph(R, idxs, w6, valid_mask=None, tau=None, collision_ok=None)
+
+w7 = make_edge_weight_tbd_updated(r, gamma, alpha=0.0, beta=0.0, lam=1.0) # new only smooth
+adj7 = build_knn_graph(R, idxs, w7, valid_mask=None, tau=None, collision_ok=None)
 
 # Define waypoints
 r0 = r[-1,:,:]  
@@ -44,9 +50,9 @@ waypoint_indices = [nearest_index_to(wp) for wp in waypoints]
 # plot_shape_sequence(all_rs=r, path_indices_list=full_path_indices, waypoints_indices=waypoint_indices)
 # plot_gammas(all_gammas=gamma, path_indices_list=full_path_indices, waypoints_indices=waypoint_indices, labels=labels)
 
-labels = ['basic', 'low act', 'smooth', 'low act + smooth']
+labels = ['basic', 'low act', 'smooth', 'new low act', 'new smooth']
 full_path_indices = []
-for temp_adj in [adj_basic, adj1, adj2, adj5]:
+for temp_adj in [adj_basic, adj1, adj2, adj6, adj7]:
     path_indices = waypoint_planner(waypoint_indices, adj=temp_adj)
     full_path_indices.append(path_indices)
 

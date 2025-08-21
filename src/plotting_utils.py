@@ -168,7 +168,7 @@ def plot_gammas(all_gammas, path_indices_list, waypoints_indices=None, waypoint_
         waypoint_marker_size (int, optional): Size of the waypoint markers. Default is 50.
     """
     path_color = [get_color('palo'), get_color('bay'), get_color('plum'), get_color('sky'), get_color('poppy'), get_color('spirited'), get_color('brick'), get_color('archway')]
-    fig, ax = plt.subplots(3, 1, figsize=(8, 6))  # Create subplots for gamma1, gamma2, gamma3
+    fig, ax = plt.subplots(3, 1, figsize=(8, 6), sharex=True)  # Create subplots for gamma1, gamma2, gamma3
 
     # Plot gamma values for each component
     if not labels: labels = list(np.arange(len(path_indices_list)))
