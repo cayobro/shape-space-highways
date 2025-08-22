@@ -59,4 +59,14 @@ for temp_adj in [adj_basic, adj1, adj2, adj6, adj7]:
 plot_shape_sequence(all_rs=r, path_indices_list=full_path_indices, waypoints_indices=waypoint_indices)
 plot_gammas(all_gammas=gamma, path_indices_list=full_path_indices, waypoints_indices=waypoint_indices, labels=labels)
 
+labels = ['low act', 'new low act']
+full_path_indices = []
+for temp_adj in [adj1, adj6]:
+    path_indices = waypoint_planner(waypoint_indices, adj=temp_adj)
+    full_path_indices.append(path_indices)
+
+plot_shape_sequence(all_rs=r, path_indices_list=full_path_indices, waypoints_indices=waypoint_indices)
+plot_gammas(all_gammas=gamma, path_indices_list=full_path_indices, waypoints_indices=waypoint_indices, labels=labels)
+
+
 input("Debug breakpoint. Press Enter to exit...")
