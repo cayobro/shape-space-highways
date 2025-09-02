@@ -9,14 +9,17 @@ save = False
 r, R, gamma, N, P = get_data()
 
 # k-NN in feature space (use R just for speed, real edge weights from shape_dist)
-nbrs, idxs = initialize_knn_graph(R, k=20)
+# nbrs, idxs = initialize_knn_graph(R, k=20)
 
 plot_obs = None
 scenario = 'basic' # 'basic', 'energy', 'sdf'
 match scenario:
     case 'basic':
-        w_basic = make_edge_weight_basic(r)
-        adj = build_knn_graph(R, idxs, w_basic, valid_mask=None, tau=None, collision_ok=None)
+        # w_basic = make_edge_weight_basic(r)
+        # adj = build_knn_graph(R, idxs, w_basic, valid_mask=None, tau=None, collision_ok=None)
+        custom_dir = '/Users/cveil/Desktop/sim/shape_graphs'
+        nbrs, idxs = pickle.load(open(custom_dir + '/knn.pickle', 'rb')), pickle.load(open(custom_dir + '/idxs.pickle', 'rb'))
+        adj = pickle.load(open(custom_dir + '/adj_basic.pickle', 'rb'))
     case 'energy':
         w_energy = make_edge_weight_tbd(r, gamma, alpha=1.0, beta=1.0, lam=1.0)
         adj = build_knn_graph(R, idxs, w_energy, valid_mask=None, tau=None, collision_ok=None)
@@ -71,15 +74,26 @@ r5 = r[1203,:,:]  # pretty straight! good
 # waypoints = [r0, r3, r4, r5] # nice route
 # waypoints = [r0, r3] # good for obstacle
 # TODO DUENNES OBSTACLE von r0 zu r0
+
 waypoints = [r0, r3] # good for energy stuff because gamma has higher absolute magnitude than necessary
 
 nearest_index_to = make_nearest_index_fn(r)
 waypoint_indices = [nearest_index_to(wp) for wp in waypoints]
 
-full_path_indices = waypoint_planner(waypoint_indices, adj=adj)
+i = 0
+full_path_indices = []
+for temp_adj in [adj, adj]:
+    if i == 0:
+        path_indices = waypoint_planner(waypoint_indices, adj=temp_adj)
+    else:
+        path_indices = waypoint_planner_tbd(waypoint_indices, adj=temp_adj, gamma=gamma)
+    full_path_indices.append(path_indices)
+    i = i + 1
 
-plot_shape_sequence(all_rs=[r], path_indices=full_path_indices, waypoints_indices=waypoint_indices, obstacles=plot_obs)
-plot_gammas(all_gammas=[gamma], path_indices=full_path_indices, waypoints_indices=waypoint_indices)
+print(len(full_path_indices[0]))
+print(len(full_path_indices[1]))
+plot_shape_sequence(all_rs=r, path_indices_list=full_path_indices, waypoints_indices=waypoint_indices)
+plot_gammas(all_gammas=gamma, path_indices_list=full_path_indices, waypoints_indices=waypoint_indices)
 
 if save:
     custom_dir = '/Users/cveil/Desktop/sim/shape_graphs'

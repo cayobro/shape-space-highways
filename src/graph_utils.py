@@ -165,3 +165,66 @@ def waypoint_planner(waypoint_indices, adj):
         else:
             full_path_indices.extend(segment)
     return full_path_indices
+
+
+def dijkstra_shortest_path_tbd(start, goal, adj, gamma):
+    """
+    Finds the shortest path between two nodes in a graph using Dijkstra's algorithm.
+
+    Parameters:
+        start (int): The starting node.
+        goal (int): The goal node.
+        adj (list of lists): The adjacency list representation of the graph.
+
+    Returns:
+        path (list): The shortest path from start to goal as a list of node indices.
+    """
+    tic = time.time()  # Start timing
+    N = len(adj)  # Number of nodes in the graph
+    dist = [np.inf]*N  # Initialize distances to infinity
+    prev = [-1]*N  # Initialize previous nodes to -1 (undefined)
+    dist[start] = 0.0  # Distance to the start node is 0
+    pq = [(0.0, start)]  # Priority queue for Dijkstra's algorithm (min-heap)
+
+    # Main loop of Dijkstra's algorithm
+    while pq:
+        d, i = heapq.heappop(pq)  # Get the node with the smallest distance
+        if i == goal:  # Stop if the goal node is reached
+            break
+        if d > dist[i]:  # Skip if the current distance is not optimal
+            continue
+        # Iterate over neighbors of the current node
+        for j, w in adj[i]:
+            # Check the gamma constraint: gamma[j] must be less than or equal to gamma[i]
+            nd = d + w  # Compute the new distance to neighbor j
+            if nd < dist[j]:  # Update if the new distance is smaller
+                if np.any(gamma[j] > gamma[i]):
+                    dist[j] = nd
+                    prev[j] = i
+                    heapq.heappush(pq, (nd, j))  # Push the neighbor into the priority queue
+
+    # Reconstruct the shortest path from start to goal
+    path = []
+    i = goal
+    while i != -1:  # Follow the previous nodes until the start node is reached
+        path.append(int(i))
+        i = prev[i]
+    toc = time.time()  # End timing
+    print(f"Shortest path from {start} to {goal} found in {toc - tic:.3f} seconds.")
+
+    # Check if a valid path was found
+    if not path:
+        print(f"No path found from {start} to {goal}.")
+        return []
+    return path[::-1]  # Return the path in the correct order (start to goal)
+
+def waypoint_planner_tbd(waypoint_indices, adj, gamma):
+    full_path_indices = []
+    for start_idx, goal_idx in zip(waypoint_indices[:-1], waypoint_indices[1:]):
+        segment = dijkstra_shortest_path_tbd(start_idx, goal_idx, adj, gamma)
+        if full_path_indices:
+            # Avoid repeating the first node of the segment
+            full_path_indices.extend(segment[1:])
+        else:
+            full_path_indices.extend(segment)
+    return full_path_indices
