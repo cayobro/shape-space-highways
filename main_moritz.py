@@ -22,7 +22,7 @@ match scenario:
         # nbrs, idxs = pickle.load(open(custom_dir + '/knn.pickle', 'rb')), pickle.load(open(custom_dir + '/idxs.pickle', 'rb'))
         # adj = pickle.load(open(custom_dir + '/adj_basic.pickle', 'rb'))
     case 'energy':
-        w_energy = make_edge_weight_tbd(r, gamma, alpha=1.0, beta=1.0, lam=1.0)
+        w_energy = make_edge_weight_energy(r, gamma, alpha=1.0, beta=1.0, lam=1.0)
         adj = build_knn_graph(R, idxs, w_energy, valid_mask=None, tau=None, collision_ok=None)
     case 'sdf':
         # one obstacle fitted to r3 with idx4

@@ -3,6 +3,7 @@ import torch
 import time
 import heapq
 from sklearn.neighbors import NearestNeighbors
+from src.edge_utils import *
 
 torch.manual_seed(0)
 
@@ -155,7 +156,7 @@ def dijkstra_shortest_path(start, goal, adj):
         return []
     return path[::-1]  # Return the path in the correct order (start to goal)
 
-def waypoint_planner(waypoint_indices, adj):
+def waypoint_planner(waypoint_indices, adj, params):
     full_path_indices = []
     for start_idx, goal_idx in zip(waypoint_indices[:-1], waypoint_indices[1:]):
         segment = dijkstra_shortest_path(start_idx, goal_idx, adj)
@@ -164,67 +165,58 @@ def waypoint_planner(waypoint_indices, adj):
             full_path_indices.extend(segment[1:])
         else:
             full_path_indices.extend(segment)
+
+    m = metrics(full_path_indices, params)
+    metrics_table(m, title="Path metrics")
+
     return full_path_indices
 
 
-def dijkstra_shortest_path_tbd(start, goal, adj, gamma):
-    """
-    Finds the shortest path between two nodes in a graph using Dijkstra's algorithm.
 
-    Parameters:
-        start (int): The starting node.
-        goal (int): The goal node.
-        adj (list of lists): The adjacency list representation of the graph.
+def metrics(path_idx, params):
+    gamma = params["gamma"]
+    r     = params["r"]
+    shape_dist = make_shape_dist(r)
 
-    Returns:
-        path (list): The shortest path from start to goal as a list of node indices.
-    """
-    tic = time.time()  # Start timing
-    N = len(adj)  # Number of nodes in the graph
-    dist = [np.inf]*N  # Initialize distances to infinity
-    prev = [-1]*N  # Initialize previous nodes to -1 (undefined)
-    dist[start] = 0.0  # Distance to the start node is 0
-    pq = [(0.0, start)]  # Priority queue for Dijkstra's algorithm (min-heap)
+    rs = r[path_idx]          # (m+1, P, 3)
+    gs = gamma[path_idx]      # (m+1, f)
+    m  = len(path_idx) - 1    # number of edges
 
-    # Main loop of Dijkstra's algorithm
-    while pq:
-        d, i = heapq.heappop(pq)  # Get the node with the smallest distance
-        if i == goal:  # Stop if the goal node is reached
-            break
-        if d > dist[i]:  # Skip if the current distance is not optimal
-            continue
-        # Iterate over neighbors of the current node
-        for j, w in adj[i]:
-            # Check the gamma constraint: gamma[j] must be less than or equal to gamma[i]
-            nd = d + w  # Compute the new distance to neighbor j
-            if nd < dist[j]:  # Update if the new distance is smaller
-                if np.any(gamma[j] > gamma[i]):
-                    dist[j] = nd
-                    prev[j] = i
-                    heapq.heappush(pq, (nd, j))  # Push the neighbor into the priority queue
+    # --- effort (activation space) ---
+    E_l2    = np.sum(np.sum(gs**2, axis=1))
+    E_l2bar = E_l2 / (m+1)
 
-    # Reconstruct the shortest path from start to goal
-    path = []
-    i = goal
-    while i != -1:  # Follow the previous nodes until the start node is reached
-        path.append(int(i))
-        i = prev[i]
-    toc = time.time()  # End timing
-    print(f"Shortest path from {start} to {goal} found in {toc - tic:.3f} seconds.")
+    # --- smoothness (activation space) ---
+    TV    = np.sum(np.linalg.norm(np.diff(gs, axis=0), axis=1))
+    TVbar = TV / max(m,1)
 
-    # Check if a valid path was found
-    if not path:
-        print(f"No path found from {start} to {goal}.")
-        return []
-    return path[::-1]  # Return the path in the correct order (start to goal)
+    # --- tip path length (workspace) ---
+    tips = rs[:, -1, :]                      # (m+1,3), last point = tip
+    tip_segs = np.linalg.norm(np.diff(tips, axis=0), axis=1)
+    L_tip    = np.sum(tip_segs)
+    L_tipbar = L_tip / max(m,1)
 
-def waypoint_planner_tbd(waypoint_indices, adj, gamma):
-    full_path_indices = []
-    for start_idx, goal_idx in zip(waypoint_indices[:-1], waypoint_indices[1:]):
-        segment = dijkstra_shortest_path_tbd(start_idx, goal_idx, adj, gamma)
-        if full_path_indices:
-            # Avoid repeating the first node of the segment
-            full_path_indices.extend(segment[1:])
-        else:
-            full_path_indices.extend(segment)
-    return full_path_indices
+    # --- shape-space length (RMS metric) ---
+    shape_segs = [shape_dist(path_idx[k], path_idx[k+1]) for k in range(m)]
+    shape_segs = np.asarray(shape_segs, float)
+    L_shape    = float(np.sum(shape_segs))
+    L_shapebar = L_shape / max(m,1)
+
+    out = {
+        "num_nodes": int(m+1),
+        # "num_edges": m,
+        # energy-like
+        "E_l2 (quadratic effort = energy)": E_l2,
+        # "E_l2_per_node": E_l2bar,
+        # smoothness
+        "TV (total variation: smoothness of path)": TV,
+        # "TV_per_edge": TVbar,
+        # tip-space metrics
+        "L_tip (workspace tip path length)": L_tip,
+        # "L_tip_per_edge": L_tipbar,
+        # shape-space metrics
+        "L_shape (RMS shape-space path length)": L_shape,
+        # "L_shape_per_edge": L_shapebar,
+    }
+
+    return out

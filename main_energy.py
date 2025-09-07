@@ -7,33 +7,32 @@ from src.plotting_utils import *
 
 
 r, R, gamma, N, P = get_data()
-
+params = {
+    "r": r,
+    "gamma": gamma,
+    "alpha": 1.0,   # geometric
+    "beta":  1.0,   # activation magnitude
+    "delta": 1.0,   # activation smoothness
+    "lamb":  0.5,   # SDF penalty
+    "eps":   0.01,  # SDF soft threshold
+    'sdf_fn': None,  # SDF function (or None)
+    "node_clearance": None  # SDF clearance (or None)
+}
 # load benchmark
 custom_dir = '/Users/cveil/Desktop/sim/shape_graphs'
 nbrs, idxs = pickle.load(open(custom_dir + '/knn.pickle', 'rb')), pickle.load(open(custom_dir + '/idxs.pickle', 'rb'))
 adj_basic = pickle.load(open(custom_dir + '/adj_basic.pickle', 'rb'))
 
 # initialize energy weight graph
-w1 = make_edge_weight_tbd(r, gamma, alpha=0.0, beta=1.0, lam=0.0) # only low activation magnitude
+params['alpha'] = 1.0; params['beta'] = 1.0; params['delta'] = 1.0
+w1 = make_edge_weight(params) 
 adj1 = build_knn_graph(R, idxs, w1, valid_mask=None, tau=None, collision_ok=None)
 
-w2 = make_edge_weight_tbd(r, gamma, alpha=0.0, beta=0.0, lam=1.0) # only smooth
+params['alpha'] = 5000.0; params['beta'] = 1.0; params['delta'] = 1.0
+w2 = make_edge_weight(params) 
 adj2 = build_knn_graph(R, idxs, w2, valid_mask=None, tau=None, collision_ok=None)
 
-# w3 = make_edge_weight_tbd(r, gamma, alpha=1.0, beta=1.0, lam=0.0) # distance + low activation magnitude
-# adj3 = build_knn_graph(R, idxs, w3, valid_mask=None, tau=None, collision_ok=None)
 
-# w4 = make_edge_weight_tbd(r, gamma, alpha=1.0, beta=0.0, lam=1.0) # distance + smooth
-# adj4 = build_knn_graph(R, idxs, w4, valid_mask=None, tau=None, collision_ok=None)
-
-# w5 = make_edge_weight_tbd(r, gamma, alpha=0.0, beta=1.0, lam=1.0) # distance + smooth
-# adj5 = build_knn_graph(R, idxs, w5, valid_mask=None, tau=None, collision_ok=None)
-
-w6 = make_edge_weight_tbd_updated(r, gamma, alpha=0.0, beta=1.0, lam=0.0) # new only low activation magnitude
-adj6 = build_knn_graph(R, idxs, w6, valid_mask=None, tau=None, collision_ok=None)
-
-w7 = make_edge_weight_tbd_updated(r, gamma, alpha=0.0, beta=0.0, lam=1.0) # new only smooth
-adj7 = build_knn_graph(R, idxs, w7, valid_mask=None, tau=None, collision_ok=None)
 
 # Define waypoints
 r0 = r[-1,:,:]  
@@ -42,31 +41,22 @@ waypoints = [r0, r3] # good for energy stuff because gamma has higher absolute m
 nearest_index_to = make_nearest_index_fn(r)
 waypoint_indices = [nearest_index_to(wp) for wp in waypoints]
 
-# labels = ['basic', 'low act', 'smooth', 'dist + low act', 'dist + smooth']
-# full_path_indices = []
-# for temp_adj in [adj_basic, adj1, adj2, adj3, adj4]:
-#     path_indices = waypoint_planner(waypoint_indices, adj=temp_adj)
-#     full_path_indices.append(path_indices)
-# plot_shape_sequence(all_rs=r, path_indices_list=full_path_indices, waypoints_indices=waypoint_indices)
-# plot_gammas(all_gammas=gamma, path_indices_list=full_path_indices, waypoints_indices=waypoint_indices, labels=labels)
-
-labels = ['basic', 'low act', 'smooth', 'new low act', 'new smooth']
+labels = ['dist', 'high alpha', 'low alpha']
 full_path_indices = []
-for temp_adj in [adj_basic, adj1, adj2, adj6, adj7]:
-    path_indices = waypoint_planner(waypoint_indices, adj=temp_adj)
+for temp_adj in [adj_basic, adj2, adj1]:
+    path_indices = waypoint_planner(waypoint_indices, adj=temp_adj, params=params)
     full_path_indices.append(path_indices)
 
 plot_shape_sequence(all_rs=r, path_indices_list=full_path_indices, waypoints_indices=waypoint_indices)
 plot_gammas(all_gammas=gamma, path_indices_list=full_path_indices, waypoints_indices=waypoint_indices, labels=labels)
 
-labels = ['low act', 'new low act']
-full_path_indices = []
-for temp_adj in [adj1, adj6]:
-    path_indices = waypoint_planner(waypoint_indices, adj=temp_adj)
-    full_path_indices.append(path_indices)
+if False:
+    custom_dir = '/Users/cveil/Desktop/sim/shape_graphs'
+    file_adj = custom_dir + '/adj_energy_a1_b1_d1.pickle'
+    adjPickle = open(file_adj, 'wb') 
+    pickle.dump(adj6, adjPickle)  
+    adjPickle.close()
 
-plot_shape_sequence(all_rs=r, path_indices_list=full_path_indices, waypoints_indices=waypoint_indices)
-plot_gammas(all_gammas=gamma, path_indices_list=full_path_indices, waypoints_indices=waypoint_indices, labels=labels)
 
 
 input("Debug breakpoint. Press Enter to exit...")

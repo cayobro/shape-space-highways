@@ -5,24 +5,24 @@ from src.graph_utils import *
 from src.sdf_utils import *
 from src.plotting_utils import *
 
+
+custom_dir = '/Users/cveil/Desktop/sim/shape_graphs'
 save = False
+export_for_experiment = False
 r, R, gamma, N, P = get_data()
 
 # k-NN in feature space (use R just for speed, real edge weights from shape_dist)
 # nbrs, idxs = initialize_knn_graph(R, k=20)
+nbrs, idxs = pickle.load(open(custom_dir + '/knn.pickle', 'rb')), pickle.load(open(custom_dir + '/idxs.pickle', 'rb'))
 
-plot_obs = None
-scenario = 'basic' # 'basic', 'energy', 'sdf'
+scenario = 'basic' # 'basic' or 'sdf'
 match scenario:
     case 'basic':
-        # w_basic = make_edge_weight_basic(r)
-        # adj = build_knn_graph(R, idxs, w_basic, valid_mask=None, tau=None, collision_ok=None)
-        custom_dir = '/Users/cveil/Desktop/sim/shape_graphs'
-        nbrs, idxs = pickle.load(open(custom_dir + '/knn.pickle', 'rb')), pickle.load(open(custom_dir + '/idxs.pickle', 'rb'))
-        adj = pickle.load(open(custom_dir + '/adj_basic.pickle', 'rb'))
-    case 'energy':
-        w_energy = make_edge_weight_tbd(r, gamma, alpha=1.0, beta=1.0, lam=1.0)
-        adj = build_knn_graph(R, idxs, w_energy, valid_mask=None, tau=None, collision_ok=None)
+        plot_obs = None
+        node_clearance = None
+        sweep_ok = None
+        valid_mask = None
+        scene_sdf = None
     case 'sdf':
         # # Scene SDF (near the centerline)
         # axis = np.array([0.0, 0.0, 1.0]); axis /= np.linalg.norm(axis)
@@ -58,13 +58,22 @@ match scenario:
         scene_sdf = lambda X: sdf_scene(X, [cyl], margin=0.0)
 
         node_clearance, valid_mask = node_clearance_mask(r, scene_sdf)
-        w_sdf   = make_edge_weight_sdf(r, node_clearance, alpha=1.0, mu=0.5, eps=0.01)
-        # Optional strict sweep checker (add if you want stronger safety):
         sweep_ok = make_edge_sweep_checker(r, scene_sdf)
-        # sweep_ok = None
-        adj   = build_knn_graph(R, idxs, w_sdf,   valid_mask=valid_mask, tau=None, collision_ok=sweep_ok)
 
-        
+params = {
+    "r": r,
+    "gamma": gamma,
+    "alpha": 1.0,   # geometric
+    "beta":  1.0,   # activation magnitude
+    "delta": 1.0,   # activation smoothness
+    "lamb":  0.5,   # SDF penalty
+    "eps":   0.01,  # SDF soft threshold
+    'sdf_fn': scene_sdf,  # SDF function (or None)
+    "node_clearance": node_clearance  # SDF clearance (or None)
+}
+w = make_edge_weight(params)
+adj = build_knn_graph(R, idxs, w, valid_mask=valid_mask, tau=None, collision_ok=sweep_ok)
+
 
 # Define waypoints
 r0 = r[-1,:,:]  
@@ -73,27 +82,16 @@ r4 = r[54576,:,:] # hook
 r5 = r[1203,:,:]  # pretty straight! good
 # waypoints = [r0, r3, r4, r5] # nice route
 # waypoints = [r0, r3] # good for obstacle
-# TODO DUENNES OBSTACLE von r0 zu r0
 
 waypoints = [r0, r3] # good for energy stuff because gamma has higher absolute magnitude than necessary
 
 nearest_index_to = make_nearest_index_fn(r)
 waypoint_indices = [nearest_index_to(wp) for wp in waypoints]
+path_indices = waypoint_planner(waypoint_indices, adj, params)
 
-i = 0
-full_path_indices = []
-for temp_adj in [adj, adj]:
-    if i == 0:
-        path_indices = waypoint_planner(waypoint_indices, adj=temp_adj)
-    else:
-        path_indices = waypoint_planner_tbd(waypoint_indices, adj=temp_adj, gamma=gamma)
-    full_path_indices.append(path_indices)
-    i = i + 1
 
-print(len(full_path_indices[0]))
-print(len(full_path_indices[1]))
-plot_shape_sequence(all_rs=r, path_indices_list=full_path_indices, waypoints_indices=waypoint_indices)
-plot_gammas(all_gammas=gamma, path_indices_list=full_path_indices, waypoints_indices=waypoint_indices)
+plot_shape_sequence(all_rs=r, path_indices_list=[path_indices], waypoints_indices=waypoint_indices)
+plot_gammas(all_gammas=gamma, path_indices_list=[path_indices], waypoints_indices=waypoint_indices)
 
 if save:
     custom_dir = '/Users/cveil/Desktop/sim/shape_graphs'
@@ -109,5 +107,13 @@ if save:
     idxsPickle = open(file_idx, 'wb')
     pickle.dump(idxs, idxsPickle)
     idxsPickle.close()
+
+if export_for_experiment:
+    save_dir = '/Users/cveil/Desktop/'
+    # r1 = r[idx,:,:]
+    # gamma1 = gamma[idx,:].reshape(1,3)
+    # df = pd.DataFrame (r1, columns = ['x', 'y', 'z']); df.to_csv(save_dir + 'r_1.csv')
+    # df = pd.DataFrame (gamma1, columns = ['act 1', 'act 2', 'act 3']); df.to_csv(save_dir + 'gamma_1.csv')
+
 
 input("Debug breakpoint. Press Enter to exit...")
