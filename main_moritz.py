@@ -12,8 +12,8 @@ export_for_experiment = False
 r, R, gamma, N, P = get_data()
 
 # k-NN in feature space (use R just for speed, real edge weights from shape_dist)
-# nbrs, idxs = initialize_knn_graph(R, k=20)
-nbrs, idxs = pickle.load(open(custom_dir + '/knn.pickle', 'rb')), pickle.load(open(custom_dir + '/idxs.pickle', 'rb'))
+nbrs, idxs = initialize_knn_graph(R, k=20)
+# nbrs, idxs = pickle.load(open(custom_dir + '/knn.pickle', 'rb')), pickle.load(open(custom_dir + '/idxs.pickle', 'rb'))
 
 scenario = 'basic' # 'basic' or 'sdf'
 match scenario:
