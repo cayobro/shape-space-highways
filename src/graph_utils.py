@@ -171,8 +171,6 @@ def waypoint_planner(waypoint_indices, adj, params):
 
     return full_path_indices
 
-
-
 def metrics(path_idx, params):
     gamma = params["gamma"]
     r     = params["r"]

@@ -9,26 +9,6 @@ import matplotlib.pyplot as plt
 elevation = 180
 azimuth = 0
 
-def equalize_axes(ax):
-    """
-    Equalizes the axes of a 3D plot.
-
-    Parameters:
-        ax (matplotlib.axes._subplots.Axes3DSubplot): The 3D axis to equalize.
-    """
-    x_limits = ax.get_xlim()
-    y_limits = ax.get_ylim()
-    z_limits = ax.get_zlim()
-    x_range = x_limits[1] - x_limits[0]
-    y_range = y_limits[1] - y_limits[0]
-    z_range = z_limits[1] - z_limits[0]
-    max_range = max(x_range, y_range, z_range)
-    x_mid = sum(x_limits) / 2
-    y_mid = sum(y_limits) / 2
-    z_mid = sum(z_limits) / 2
-    ax.set_xlim(x_mid - max_range / 2, x_mid + max_range / 2)
-    ax.set_ylim(y_mid - max_range / 2, y_mid + max_range / 2)
-    ax.set_zlim(z_mid - max_range / 2, z_mid + max_range / 2)
 
 # Load data
 r, R, gamma, N, P = get_data()
@@ -42,10 +22,11 @@ r3inv[:, 2] = r3[:, 2]
 r4 = r[54576,:,:] # hook
 r5 = r[1203,:,:]  # pretty straight! good
 
-shapes = [r0, r3, r4, r5, r0]
+
 
 
 # === Scene 1 ===
+shapes = [r0, r3, r4, r5, r0]
 fig, ax = plt.subplots(1, 1, subplot_kw={'projection': '3d'})
 for r in shapes:
     ax.plot(r[:, 0], r[:, 1], r[:, 2], color='C0', linewidth=2.0)
@@ -71,9 +52,10 @@ input(" Press Enter to continue...")
 
 
 # === Scene 2 ===
+shapes = [r0, r4, r0]
 fig, ax = plt.subplots(1, 1, subplot_kw={'projection': '3d'})
 for r in shapes:
-    ax.plot(r[:, 0], r[:, 1], r[:, 2], color='C0', linewidth=1.0)
+    ax.plot(r[:, 0], r[:, 1], r[:, 2], color='C0', linewidth=2.0)
 
 cyl_center = np.array([0.02, 0.0, 0.045])
 cyl_radius = 0.008
@@ -85,7 +67,7 @@ box = lambda X: sdf_box_aabb(X, center=box_center, half_sizes=box_half_sizes)
 scene_sdf = lambda X: sdf_scene(X, [cyl, box], margin=0.0)
 
 plot_obs = [
-    {"type": "cylinder", "center": cyl_center, "radius": cyl_radius, "height": cyl_height, "color": "orange", "alpha": 0.35},
+    # {"type": "cylinder", "center": cyl_center, "radius": cyl_radius, "height": cyl_height, "color": "orange", "alpha": 0.35},
     {"type": "box", "center": box_center, "half_sizes": box_half_sizes, "color": "red", "alpha": 0.25},
 ]
 for obs in plot_obs:

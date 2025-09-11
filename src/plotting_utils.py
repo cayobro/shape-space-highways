@@ -170,29 +170,31 @@ def plot_gammas(all_gammas, path_indices_list, waypoints_indices=None, waypoint_
     path_color = [get_color('palo'), get_color('bay'), get_color('plum'), get_color('sky'), get_color('poppy'), get_color('spirited'), get_color('brick'), get_color('archway')]
     fig, ax = plt.subplots(3, 1, figsize=(8, 6), sharex=True)  # Create subplots for gamma1, gamma2, gamma3
 
-    # Plot gamma values for each component
     if not labels: labels = list(np.arange(len(path_indices_list)))
-    i = 0
-    for path_indices in path_indices_list:
-        gammas = all_gammas[path_indices]
-        xvec = np.arange(1, gammas.shape[0] + 1) 
-        ax[0].plot(xvec, gammas[:, 0], marker='.', color=path_color[i], label = labels[i])
-        ax[1].plot(xvec, gammas[:, 1], marker='.', color=path_color[i])
-        ax[2].plot(xvec, gammas[:, 2], marker='.', color=path_color[i])
-        i = i + 1
-    ax[0].set_title("gammas over shape sequence")
-    ax[0].legend()
-    # Highlight waypoints if provided
+    number_of_sections = len(waypoints_indices) - 1
+    x_sections = np.linspace(0, 1, num=number_of_sections + 1) 
     if waypoints_indices is not None:
-        for i, a in enumerate(ax):
-            for j in range(len(waypoints_indices)):
-                wp = path_indices.index(waypoints_indices[j])
-                a.scatter(wp+1, all_gammas[waypoints_indices[j], i],
-                        color=get_color('illuminating'), s=waypoint_marker_size)
+        for j_sec in range(len(waypoints_indices)-1):
+            i = 0
+            for path_indices in path_indices_list:
+                # idx11 = path_indices.index(waypoints_indices[j_sec])
+                # idx2 = path_indices.index(waypoints_indices[j_sec+1]) 
+                idx1 = path_indices.index(waypoints_indices[j_sec])  # First occurrence of waypoints_indices[j_sec]
+                idx2 = len(path_indices) - 1 - path_indices[::-1].index(waypoints_indices[j_sec + 1])  # Last occurrence of waypoints_indices[j_sec+1]
+                if idx1 >= idx2:
+                    raise ValueError(f"Invalid indices: idx1 ({idx1}) >= idx2 ({idx2}). Check path_indices and waypoints_indices.")
+                path_gammas = all_gammas[path_indices[idx1:idx2+1]]
+                xvec = np.linspace(x_sections[j_sec], x_sections[j_sec+1], num=path_gammas.shape[0])
+                for j_g in range(3):
+                    ax[j_g].plot(xvec, path_gammas[:,j_g], marker='.', color=path_color[i])
+                    ax[j_g].scatter(xvec[0], path_gammas[idx1-idx1, j_g], color=get_color('illuminating'), s=waypoint_marker_size)
+                    ax[j_g].scatter(xvec[-1], path_gammas[idx2-idx1, j_g], color=get_color('illuminating'), s=waypoint_marker_size)
+                i = i + 1
+            
 
     # Add legends and labels
     for i, a in enumerate(ax):
-        # a.legend()
+        a.legend()
         a.set_ylabel(f'gamma{i+1}')
         a.grid(True)
 
@@ -200,5 +202,24 @@ def plot_gammas(all_gammas, path_indices_list, waypoints_indices=None, waypoint_
     fig.tight_layout()  # Adjust layout to prevent overlap
     plt.show(block=False)  # Display the plot
 
+def equalize_axes(ax):
+    """
+    Equalizes the axes of a 3D plot.
 
+    Parameters:
+        ax (matplotlib.axes._subplots.Axes3DSubplot): The 3D axis to equalize.
+    """
+    x_limits = ax.get_xlim()
+    y_limits = ax.get_ylim()
+    z_limits = ax.get_zlim()
+    x_range = x_limits[1] - x_limits[0]
+    y_range = y_limits[1] - y_limits[0]
+    z_range = z_limits[1] - z_limits[0]
+    max_range = max(x_range, y_range, z_range)
+    x_mid = sum(x_limits) / 2
+    y_mid = sum(y_limits) / 2
+    z_mid = sum(z_limits) / 2
+    ax.set_xlim(x_mid - max_range / 2, x_mid + max_range / 2)
+    ax.set_ylim(y_mid - max_range / 2, y_mid + max_range / 2)
+    ax.set_zlim(z_mid - max_range / 2, z_mid + max_range / 2)
 

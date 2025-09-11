@@ -52,9 +52,9 @@ params = {
 }
 w = make_edge_weight(params)
 # adj = build_knn_graph(R, idxs, w, valid_mask=valid_mask, tau=None, collision_ok=sweep_ok)
-# adj = pickle.load(open(custom_dir + '/adj_sdf_a1_b0_d0_l05.pickle', 'rb'))
+adj = pickle.load(open(custom_dir + '/adj_sdf_a1_b0_d0_l05.pickle', 'rb'))
 # adj = pickle.load(open(custom_dir + '/adj_basic.pickle', 'rb'))
-adj = pickle.load(open(custom_dir + '/adj_energy_a1_b1_d1.pickle', 'rb'))
+# adj = pickle.load(open(custom_dir + '/adj_energy_a1_b1_d1.pickle', 'rb'))
 
 
 # Define waypoints
@@ -62,8 +62,8 @@ r0 = r[-1,:,:]
 r3 = r[4,:,:]
 r4 = r[54576,:,:] # hook
 r5 = r[1203,:,:]  # pretty straight! good
-# waypoints = [r0, r3, r4, r5, r0]
-waypoints = [r0, r3] # good for energy stuff because gamma has higher absolute magnitude than necessary
+waypoints = [r0, r3, r4, r5, r0]
+# waypoints = [r0, r3] # good for energy stuff because gamma has higher absolute magnitude than necessary
 
 nearest_index_to = make_nearest_index_fn(r)
 waypoint_indices = [nearest_index_to(wp) for wp in waypoints]
